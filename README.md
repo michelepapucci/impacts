@@ -23,7 +23,7 @@ Each row contains all the linguistic features extracted for both the original te
 ## Cite
 Have you used IMPaCTS for any of your work? 
 Cite the LREC Paper of the Dataset (temporary citation): 
-```
+```bibtex
 @inproceedings{papucci-etal-2026-controllable,
     title = "Controllable Sentence Simplification in {I}talian: Fine-Tuning Large Language Models on Automatically Generated Resources",
     author = "Papucci, Michele  and
