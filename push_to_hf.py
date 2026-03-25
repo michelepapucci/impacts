@@ -8,69 +8,75 @@ Usage:
 """
 
 import argparse
+import os
 import pandas as pd
-from datasets import Dataset, DatasetDict, Features, Value
-from huggingface_hub import HfApi
+from datasets import Dataset, DatasetDict
 
 
-def build_dataset_dict_chunked(zip_path: str, chunk_size: int = 5000) -> DatasetDict:
-    """Stream dataset using generators to minimize memory usage."""
-    print(f"Streaming dataset from {zip_path} (chunk_size={chunk_size})...")
+def save_to_parquet_chunked(zip_path: str, output_dir: str = "impacts_parquet", chunk_size: int = 10000):
+    """Save CSV to Parquet files in chunks, minimal memory usage."""
+    os.makedirs(output_dir, exist_ok=True)
+    print(f"Converting {zip_path} to Parquet files...")
     
-    # First pass: scan to find domains and count rows
+    # Scan to find domains
     print("Scanning domains...")
     domains = set()
-    row_count = 0
     for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
         domains.update(chunk_df["domain"].unique())
-        row_count += len(chunk_df)
     
     domains = sorted(list(domains))
-    print(f"Found {len(domains)} domains with {row_count:,} total rows\n")
+    print(f"Found {len(domains)} domains\n")
     
-    # Create generators for each domain + all
-    def make_generator(filter_domain=None):
-        """Generator that yields records from CSV, optionally filtered by domain."""
-        processed = 0
-        for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
-            if filter_domain is None:
-                records = chunk_df.to_dict(orient="records")
-            else:
-                records = chunk_df[chunk_df["domain"] == filter_domain].to_dict(orient="records")
-            
-            for record in records:
-                yield record
-                processed += 1
-                if processed % 50000 == 0:
-                    print(f"    Uploaded {processed:,} rows...")
-    
-    # Build dataset splits using generators
-    print("Building domain splits...")
-    dataset_splits = {}
+    # Save each domain to separate parquet files
+    print("Saving domain splits to Parquet...")
+    domain_row_counts = {}
     for domain in domains:
-        print(f"  {domain}...", end="", flush=True)
-        dataset_splits[domain] = Dataset.from_generator(
-            lambda d=domain: make_generator(filter_domain=d)
-        )
-        print(f" ✓")
+        print(f"  Processing {domain}...", end="", flush=True)
+        rows = []
+        row_count = 0
+        for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
+            domain_subset = chunk_df[chunk_df["domain"] == domain]
+            rows.append(domain_subset)
+            row_count += len(domain_subset)
+        
+        if rows:
+            domain_df = pd.concat(rows, ignore_index=True)
+            parquet_path = os.path.join(output_dir, f"{domain}.parquet")
+            domain_df.to_parquet(parquet_path)
+            domain_row_counts[domain] = len(domain_df)
+            print(f" ✓ ({len(domain_df):,} rows)")
     
-    # Also include combined "all" split
-    print(f"  all...", end="", flush=True)
-    dataset_splits["all"] = Dataset.from_generator(
-        lambda: make_generator(filter_domain=None)
-    )
-    print(f" ✓")
+    # Also save combined "all" split
+    print(f"  Processing all...", end="", flush=True)
+    rows = []
+    for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
+        rows.append(chunk_df)
+    
+    if rows:
+        all_df = pd.concat(rows, ignore_index=True)
+        parquet_path = os.path.join(output_dir, "all.parquet")
+        all_df.to_parquet(parquet_path)
+        domain_row_counts["all"] = len(all_df)
+        print(f" ✓ ({len(all_df):,} rows)")
+    
+    return output_dir, domain_row_counts
+
+
+def build_dataset_dict_from_parquet(parquet_dir: str) -> DatasetDict:
+    """Load Parquet files into Dataset splits."""
+    print(f"\nLoading Parquet files from {parquet_dir}...")
+    dataset_splits = {}
+    
+    for filename in sorted(os.listdir(parquet_dir)):
+        if filename.endswith(".parquet"):
+            split_name = filename.replace(".parquet", "")
+            parquet_path = os.path.join(parquet_dir, filename)
+            print(f"  Loading {split_name}...", end="", flush=True)
+            df = pd.read_parquet(parquet_path)
+            dataset_splits[split_name] = Dataset.from_pandas(df, preserve_index=False)
+            print(f" ✓ ({len(df):,} rows)")
     
     return DatasetDict(dataset_splits)
-
-
-def push_to_hub(dataset_dict: DatasetDict, repo_id: str):
-    print(f"\nPushing to HuggingFace Hub: {repo_id}")
-    dataset_dict.push_to_hub(
-        repo_id,
-        private=False,  # set True if you want it private first
-    )
-    print(f"Done! View at: https://huggingface.co/datasets/{repo_id}")
 
 
 if __name__ == "__main__":
@@ -83,7 +89,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--repo-id",
         required=True,
-        help="HuggingFace repo id, e.g. ItalianNLPLab/IMPaCTS",
+        help="HuggingFace repo id, e.g. mpapucci/impacts",
     )
     parser.add_argument(
         "--chunk-size",
@@ -91,7 +97,23 @@ if __name__ == "__main__":
         default=10000,
         help="Chunk size for streaming (default: 10000 rows)",
     )
+    parser.add_argument(
+        "--parquet-dir",
+        default="impacts_parquet",
+        help="Directory to save Parquet files (default: impacts_parquet)",
+    )
     args = parser.parse_args()
 
-    dataset_dict = build_dataset_dict_chunked(args.zip_path, chunk_size=args.chunk_size)
-    push_to_hub(dataset_dict, args.repo_id)
+    # Step 1: Convert ZIP to Parquet files (memory-efficient)
+    parquet_dir, row_counts = save_to_parquet_chunked(args.zip_path, args.parquet_dir, args.chunk_size)
+    
+    # Step 2: Load Parquet files into Dataset splits
+    dataset_dict = build_dataset_dict_from_parquet(parquet_dir)
+    
+    # Step 3: Push to HuggingFace Hub
+    print(f"\nPushing to HuggingFace Hub: {args.repo_id}")
+    dataset_dict.push_to_hub(
+        args.repo_id,
+        private=False,  # set True if you want it private first
+    )
+    print(f"Done! View at: https://huggingface.co/datasets/{args.repo_id}")
