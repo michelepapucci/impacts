@@ -4,6 +4,8 @@ This repository contains the IMPaCTS (Italian Multi-level Parallel Corpus for Co
 
 The dataset is contained in the archive IMPaCTS.zip. Given the large size of the dataset, to download the repository, please install [git-lfs](https://git-lfs.com/).
 
+Otherwise, IMPaCTS is also available on HuggingFace [here](https://huggingface.co/datasets/mpapucci/impacts).
+
 ## Dataset Description
 
 Each row in the dataset represents a pair consisting of a human-written complex sentence and a machine-generated simplified sentence. Each row is identified by the `idx` field, which is a unique id for each row, and `original_sentence_idx` that represents a unique id for each original human-written sentence. 
