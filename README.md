@@ -10,7 +10,7 @@ Each row in the dataset represents a pair consisting of a human-written complex 
 Each original sentence has multiple simplifications, each identified with a different row. The average number of simplifications per original sentence is 9.6. 
 The original text of each pair is under the `original_text` column, while the simplified text is under `simplification`. 
 
-Each pair is annotated with a variety of linguistic features and with a readability score (obtained with Read-it). There are four readability scores for each sentence (both the original and the simplification):
+Each pair is annotated with a variety of linguistic features obtained with ProfilingUD (paper [here](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.883.pdf), web-based tool [here](http://www.italianlp.it/demo/profiling-UD/)) and with a readability score obtained with Read-IT (paper [here](https://aclanthology.org/W11-2308.pdf), demo [here](http://www.italianlp.it/demo/read-it/)). There are four readability scores for each sentence (both the original and the simplification):
 - raw - Readability score related to raw textual features (e.g., average number of characters per token, average number of tokens per sentence, etc.)
 - lexical - Readability score related to lexical features (e.g., Type-Token Ratio)
 - syntactic - Readability score related to syntactic features (e.g., average depth of the syntactic tree, distribution of subordinate clauses, etc.)
