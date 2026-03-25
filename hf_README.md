@@ -38,9 +38,9 @@ IMPaCTS is a large-scale Italian parallel corpus for controlled text simplificat
 
 | Split | # Sentence Pairs | # Original Sentences |
 |---|---|---|
-| `wikipedia` | ## | ## |
-| `public_administration` | ## | ## |
-| `all` (combined) | ## | ## |
+| `wikipedia` | 1058960 | 108371 |
+| `public_administration` | 385200 | 40462 |
+| `all` (combined) | 1444160 | 148833 |
 
 Average number of simplifications per original sentence: **9.6**
 

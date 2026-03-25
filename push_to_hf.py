@@ -13,29 +13,55 @@ from datasets import Dataset, DatasetDict, Features, Value
 from huggingface_hub import HfApi
 
 
-def load_dataset(zip_path: str) -> pd.DataFrame:
-    print(f"Loading dataset from {zip_path}...")
-    df = pd.read_csv(zip_path, compression="zip")
-    print(f"Loaded {len(df):,} rows, {len(df.columns)} columns")
-    return df
-
-
-def build_dataset_dict(df: pd.DataFrame) -> DatasetDict:
-    """Split by domain into separate configs — here we use them as splits."""
-    domains = df["domain"].unique()
-    print(f"Domains found: {list(domains)}")
-
-    splits = {}
-    for domain in sorted(domains):
-        subset = df[df["domain"] == domain].reset_index(drop=True)
-        print(f"  {domain}: {len(subset):,} rows")
-        splits[domain] = Dataset.from_pandas(subset, preserve_index=False)
-
-    # Also include a combined "all" split
-    splits["all"] = Dataset.from_pandas(df.reset_index(drop=True), preserve_index=False)
-    print(f"  all: {len(df):,} rows")
-
-    return DatasetDict(splits)
+def build_dataset_dict_chunked(zip_path: str, chunk_size: int = 5000) -> DatasetDict:
+    """Stream dataset using generators to minimize memory usage."""
+    print(f"Streaming dataset from {zip_path} (chunk_size={chunk_size})...")
+    
+    # First pass: scan to find domains and count rows
+    print("Scanning domains...")
+    domains = set()
+    row_count = 0
+    for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
+        domains.update(chunk_df["domain"].unique())
+        row_count += len(chunk_df)
+    
+    domains = sorted(list(domains))
+    print(f"Found {len(domains)} domains with {row_count:,} total rows\n")
+    
+    # Create generators for each domain + all
+    def make_generator(filter_domain=None):
+        """Generator that yields records from CSV, optionally filtered by domain."""
+        processed = 0
+        for chunk_df in pd.read_csv(zip_path, compression="zip", chunksize=chunk_size):
+            if filter_domain is None:
+                records = chunk_df.to_dict(orient="records")
+            else:
+                records = chunk_df[chunk_df["domain"] == filter_domain].to_dict(orient="records")
+            
+            for record in records:
+                yield record
+                processed += 1
+                if processed % 50000 == 0:
+                    print(f"    Uploaded {processed:,} rows...")
+    
+    # Build dataset splits using generators
+    print("Building domain splits...")
+    dataset_splits = {}
+    for domain in domains:
+        print(f"  {domain}...", end="", flush=True)
+        dataset_splits[domain] = Dataset.from_generator(
+            lambda d=domain: make_generator(filter_domain=d)
+        )
+        print(f" ✓")
+    
+    # Also include combined "all" split
+    print(f"  all...", end="", flush=True)
+    dataset_splits["all"] = Dataset.from_generator(
+        lambda: make_generator(filter_domain=None)
+    )
+    print(f" ✓")
+    
+    return DatasetDict(dataset_splits)
 
 
 def push_to_hub(dataset_dict: DatasetDict, repo_id: str):
@@ -59,8 +85,13 @@ if __name__ == "__main__":
         required=True,
         help="HuggingFace repo id, e.g. ItalianNLPLab/IMPaCTS",
     )
+    parser.add_argument(
+        "--chunk-size",
+        type=int,
+        default=10000,
+        help="Chunk size for streaming (default: 10000 rows)",
+    )
     args = parser.parse_args()
 
-    df = load_dataset(args.zip_path)
-    dataset_dict = build_dataset_dict(df)
+    dataset_dict = build_dataset_dict_chunked(args.zip_path, chunk_size=args.chunk_size)
     push_to_hub(dataset_dict, args.repo_id)
