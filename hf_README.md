@@ -65,14 +65,14 @@ Average number of simplifications per original sentence: **9.6**
 
 IMPaCTS comes in two variants, each available for three domain splits:
 
-| Config | Columns | Use when |
-|---|---|---|
-| `all` | Core columns only (12) | Training, fine-tuning, most NLP tasks |
-| `wikipedia` | Core columns only (12) | Wikipedia domain only |
-| `public_administration` | Core columns only (12) | Public administration domain only |
-| `all_profiling` | Core + ~300 linguistic features | Readability research, feature analysis |
-| `wikipedia_profiling` | Core + ~300 linguistic features | Wikipedia domain + full profiling |
-| `public_administration_profiling` | Core + ~300 linguistic features | PA domain + full profiling |
+| Config | Columns |
+|---|---|
+| `all` | Core columns only (12) | 
+| `wikipedia` | Core columns only (12) | 
+| `public_administration` | Core columns only (12) | 
+| `all_profiling` | Core + ~300 linguistic features | 
+| `wikipedia_profiling` | Core + ~300 linguistic features | 
+| `public_administration_profiling` | Core + ~300 linguistic features | 
 
 The `_profiling` configs include all columns of the corresponding base config, plus hundreds of additional linguistic features extracted with ProfilingUD (see [Linguistic Features](#linguistic-features) below).
 
@@ -81,6 +81,8 @@ The `_profiling` configs include all columns of the corresponding base config, p
 Each row represents a (complex sentence, simplified sentence) pair.
 
 ### Core Columns (all configs)
+
+The Core Columns include idx of the pairs and of the original sentence, the original and simplified text, and four readability (Read-IT) scores for each sentence of the pair.
 
 | Column | Type | Description |
 |---|---|---|
@@ -97,16 +99,6 @@ Each row represents a (complex sentence, simplified sentence) pair.
 | `simplification_syntax` | float | Read-IT syntactic score for the simplification |
 | `simplification_all` | float | Read-IT overall readability score for the simplification |
 
-### Readability Scores (Read-IT)
-
-Four scores are provided for both the original human-written texts and the automatically generated simplifications:
-
-| Suffix | Description |
-|---|---|
-| `_base` | Raw textual features (avg. characters/token, avg. tokens/sentence, etc.) |
-| `_lexical` | Lexical features (Type-Token Ratio, etc.) |
-| `_syntax` | Syntactic features (tree depth, subordinate clause distribution, etc.) |
-| `_all` | Overall readability score combining all features |
 
 ### Linguistic Features
 
