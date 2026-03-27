@@ -61,11 +61,26 @@ The dataset is a cleaned subset of the dataset constructed for the LREC2026 pape
 
 Average number of simplifications per original sentence: **9.6**
 
+## Available Configs
+
+IMPaCTS comes in two variants, each available for three domain splits:
+
+| Config | Columns | Use when |
+|---|---|---|
+| `all` | Core columns only (12) | Training, fine-tuning, most NLP tasks |
+| `wikipedia` | Core columns only (12) | Wikipedia domain only |
+| `public_administration` | Core columns only (12) | Public administration domain only |
+| `all_profiling` | Core + ~300 linguistic features | Readability research, feature analysis |
+| `wikipedia_profiling` | Core + ~300 linguistic features | Wikipedia domain + full profiling |
+| `public_administration_profiling` | Core + ~300 linguistic features | PA domain + full profiling |
+
+The `_profiling` configs include all columns of the corresponding base config, plus hundreds of additional linguistic features extracted with ProfilingUD (see [Linguistic Features](#linguistic-features) below).
+
 ## Dataset Structure
 
 Each row represents a (complex sentence, simplified sentence) pair.
 
-### Key Columns
+### Core Columns (all configs)
 
 | Column | Type | Description |
 |---|---|---|
@@ -73,7 +88,14 @@ Each row represents a (complex sentence, simplified sentence) pair.
 | `original_sentence_idx` | int | Unique identifier for the original sentence (multiple rows share the same original) |
 | `original_text` | string | The original complex sentence (Italian) |
 | `simplification` | string | The machine-generated simplified sentence |
-| `domain` | string | Source domain: `wikipedia` or `public_administration` |
+| `original_base` | float | Read-IT base score for the original sentence |
+| `original_lexical` | float | Read-IT lexical score for the original sentence |
+| `original_syntax` | float | Read-IT syntactic score for the original sentence |
+| `original_all` | float | Read-IT overall readability score for the original sentence |
+| `simplification_base` | float | Read-IT base score for the simplification |
+| `simplification_lexical` | float | Read-IT lexical score for the simplification |
+| `simplification_syntax` | float | Read-IT syntactic score for the simplification |
+| `simplification_all` | float | Read-IT overall readability score for the simplification |
 
 ### Readability Scores (Read-IT)
 
@@ -88,6 +110,8 @@ Four scores are provided for both the original human-written texts and the autom
 
 ### Linguistic Features
 
+> **Available only in `_profiling` configs** (`all_profiling`, `wikipedia_profiling`, `public_administration_profiling`).
+
 Hundreds of additional linguistic features are provided for both sentences, with suffix `_original` (e.g., `char_per_tok_original`) or `_simplification`. These include morphological, lexical, and syntactic statistics extracted using ProfilingUD.
 
 ## Example
@@ -95,20 +119,25 @@ Hundreds of additional linguistic features are provided for both sentences, with
 ```python
 from datasets import load_dataset
 
-# Load the public administration domain
+# Load all domains (core columns only — fastest, recommended for most tasks)
 ds = load_dataset("mpapucci/impacts", "all")
 
-# Or load a specific split:
-# ds = load_dataset("mpapucci/impacts", split="wikipedia")
-# ds = load_dataset("mpapucci/impacts", split="public_administration")
+# Load a specific domain (core columns only):
+# ds = load_dataset("mpapucci/impacts", "wikipedia")
+# ds = load_dataset("mpapucci/impacts", "public_administration")
 
-# Get all simplifications for a given original sentence
+# Load with full linguistic profiling features (~300 columns):
+# ds = load_dataset("mpapucci/impacts", "all_profiling")
+# ds = load_dataset("mpapucci/impacts", "wikipedia_profiling")
+# ds = load_dataset("mpapucci/impacts", "public_administration_profiling")
+
+# Get all simplifications for a given original sentence, ranked by readability
 original_id = 110992
-pairs = [r for r in ds if r["original_sentence_idx"] == original_id]
+pairs = [r for r in ds["train"] if r["original_sentence_idx"] == original_id]
 pairs_sorted = sorted(pairs, key=lambda x: x["simplification_all"], reverse=True)
 
 print("Original:", pairs_sorted[0]["original_text"])
-for p in pairs_sorted[1:]:
+for p in pairs_sorted:
     print(f"  Readability {p['simplification_all']:.3f}:", p["simplification"])
 ```
 
