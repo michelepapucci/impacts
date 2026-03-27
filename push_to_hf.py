@@ -62,21 +62,25 @@ def save_to_parquet_chunked(zip_path: str, output_dir: str = "impacts_parquet", 
     return output_dir, domain_row_counts
 
 
-def build_dataset_dict_from_parquet(parquet_dir: str) -> DatasetDict:
-    """Load Parquet files into Dataset splits."""
-    print(f"\nLoading Parquet files from {parquet_dir}...")
-    dataset_splits = {}
-    
+def push_configs_from_parquet(parquet_dir: str, repo_id: str):
+    """Push each Parquet file as a separate config (subset) with a single 'train' split."""
+    print(f"\nPushing configs to HuggingFace Hub: {repo_id}")
+
     for filename in sorted(os.listdir(parquet_dir)):
         if filename.endswith(".parquet"):
-            split_name = filename.replace(".parquet", "")
+            config_name = filename.replace(".parquet", "")
             parquet_path = os.path.join(parquet_dir, filename)
-            print(f"  Loading {split_name}...", end="", flush=True)
+            print(f"  Pushing config '{config_name}'...", end="", flush=True)
             df = pd.read_parquet(parquet_path)
-            dataset_splits[split_name] = Dataset.from_pandas(df, preserve_index=False)
+            dataset = Dataset.from_pandas(df, preserve_index=False)
+            DatasetDict({"train": dataset}).push_to_hub(
+                repo_id,
+                config_name=config_name,
+                private=False,
+            )
             print(f" ✓ ({len(df):,} rows)")
-    
-    return DatasetDict(dataset_splits)
+
+    print(f"\nDone! View at: https://huggingface.co/datasets/{repo_id}")
 
 
 if __name__ == "__main__":
@@ -106,14 +110,6 @@ if __name__ == "__main__":
 
     # Step 1: Convert ZIP to Parquet files (memory-efficient)
     parquet_dir, row_counts = save_to_parquet_chunked(args.zip_path, args.parquet_dir, args.chunk_size)
-    
-    # Step 2: Load Parquet files into Dataset splits
-    dataset_dict = build_dataset_dict_from_parquet(parquet_dir)
-    
-    # Step 3: Push to HuggingFace Hub
-    print(f"\nPushing to HuggingFace Hub: {args.repo_id}")
-    dataset_dict.push_to_hub(
-        args.repo_id,
-        private=False,  # set True if you want it private first
-    )
-    print(f"Done! View at: https://huggingface.co/datasets/{args.repo_id}")
+
+    # Step 2: Push each domain as its own config with a single 'train' split
+    push_configs_from_parquet(parquet_dir, args.repo_id)
