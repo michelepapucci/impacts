@@ -2,45 +2,56 @@
 language:
 - it
 license: cc-by-4.0
+configs:
+- config_name: all
+  data_files:
+  - split: train
+    path: all/train-*.parquet
+- config_name: wikipedia
+  data_files:
+  - split: train
+    path: wikipedia/train-*.parquet
+- config_name: public_administration
+  data_files:
+  - split: train
+    path: public_administration/train-*.parquet
+- config_name: all_profiling
+  data_files:
+  - split: train
+    path: all_profiling/train-*.parquet
+- config_name: wikipedia_profiling
+  data_files:
+  - split: train
+    path: wikipedia_profiling/train-*.parquet
+- config_name: public_administration_profiling
+  data_files:
+  - split: train
+    path: public_administration_profiling/train-*.parquet
 task_categories:
-- text2text-generation
-task_ids:
+- text-generation
+- translation
+tags:
 - text-simplification
+- legal
+- wikipedia
 pretty_name: IMPaCTS
 size_categories:
 - 1M<n<10M
-tags:
-- text-simplification
-- italian
-- readability
-- controllable-generation
-- linguistics
-configs:
-- config_name: wikipedia
-  data_files:
-    - split: train
-      path: data/wikipedia-*
-- config_name: public_administration
-  data_files:
-    - split: train
-      path: data/public_administration-*
-- config_name: default
-  data_files:
-    - split: train
-      path: data/all-*
 ---
 
 # IMPaCTS: Italian Multi-level Parallel Corpus for Controlled Text Simplification
 
 IMPaCTS is a large-scale Italian parallel corpus for controlled text simplification, containing complex–simple sentence pairs automatically generated using Large Language Models. Each pair is annotated with readability scores (via Read-IT; paper [here](https://aclanthology.org/W11-2308.pdf)) and a rich set of linguistic features obtained with ProfilingUD (paper [here](http://www.lrec-conf.org/proceedings/lrec2020/pdf/2020.lrec-1.883.pdf), web-based tool [here](http://www.italianlp.it/demo/profiling-UD/)).
+The dataset is a cleaned subset of the dataset constructed for the LREC2026 paper, containing 1.066.828 pairs.
+
 
 ## Dataset Summary
 
 | Split | # Sentence Pairs | # Original Sentences |
 |---|---|---|
-| `wikipedia` | 1058960 | 108371 |
-| `public_administration` | 385200 | 40462 |
-| `all` (combined) | 1444160 | 148833 |
+| `wikipedia` | 764061 | 106680 |
+| `public_administration` | 302767 | 39820 |
+| `all` (combined) | 1066828 | 146500 |
 
 Average number of simplifications per original sentence: **9.6**
 
@@ -60,7 +71,7 @@ Each row represents a (complex sentence, simplified sentence) pair.
 
 ### Readability Scores (Read-IT)
 
-Four scores are provided for both the original (`original_*`) and the simplification (`simplification_*`):
+Four scores are provided for both the original human-written texts and the automatically generated simplifications:
 
 | Suffix | Description |
 |---|---|
@@ -71,7 +82,7 @@ Four scores are provided for both the original (`original_*`) and the simplifica
 
 ### Linguistic Features
 
-Hundreds of additional linguistic features are provided for both sentences, with suffix `_original` (e.g., `char_per_tok_original`) or `_simplification`. These include morphological, lexical, and syntactic statistics extracted from dependency parses.
+Hundreds of additional linguistic features are provided for both sentences, with suffix `_original` (e.g., `char_per_tok_original`) or `_simplification`. These include morphological, lexical, and syntactic statistics extracted using ProfilingUD.
 
 ## Example
 
@@ -79,14 +90,15 @@ Hundreds of additional linguistic features are provided for both sentences, with
 from datasets import load_dataset
 
 # Load the public administration domain
-ds = load_dataset("mpapucci/impacts", "public_administration")
+ds = load_dataset("mpapucci/impacts", "all")
 
-# Or load everything
-ds = load_dataset("mpapucci/impacts")
+# Or load a specific split:
+# ds = load_dataset("mpapucci/impacts", split="wikipedia")
+# ds = load_dataset("mpapucci/impacts", split="public_administration")
 
 # Get all simplifications for a given original sentence
 original_id = 110992
-pairs = [r for r in ds["train"] if r["original_sentence_idx"] == original_id]
+pairs = [r for r in ds if r["original_sentence_idx"] == original_id]
 pairs_sorted = sorted(pairs, key=lambda x: x["simplification_all"], reverse=True)
 
 print("Original:", pairs_sorted[0]["original_text"])
