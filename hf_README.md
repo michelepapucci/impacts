@@ -30,6 +30,8 @@ configs:
 task_categories:
 - text-generation
 - translation
+task_ids:
+- text-simplification
 tags:
 - text-simplification
 - legal
