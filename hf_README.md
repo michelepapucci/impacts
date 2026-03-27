@@ -36,6 +36,10 @@ tags:
 - text-simplification
 - legal
 - wikipedia
+- italian
+- readability
+- controllable-generation
+- linguistics
 pretty_name: IMPaCTS
 size_categories:
 - 1M<n<10M
