@@ -29,12 +29,16 @@ Have you used IMPaCTS for any of your work?
 Cite the LREC Paper of the Dataset (temporary citation): 
 ```bibtex
 @inproceedings{papucci-etal-2026-controllable,
-    title = "Controllable Sentence Simplification in {I}talian: Fine-Tuning Large Language Models on Automatically Generated Resources",
-    author = "Papucci, Michele  and
-      Venturi, Giulia  and
-      Dell{'}Orletta, Felice",
-    booktitle = "Proceedings of the Fifteenth Language Resources and Evaluation Conference",
-    year = "2026",
+  title = {Controllable Sentence Simplification in Italian: Fine-Tuning Large Language Models on Automatically Generated Resources},
+  author = {Papucci, Michele and Venturi, Giulia and Dell'Orletta, Felice},
+  booktitle = {Proceedings of the Fifteenth Language Resources and Evaluation Conference (LREC 2026)},
+  month = {May},
+  year = {2026},
+  pages = {7178--7191},
+  address = {Palma, Mallorca, Spain},
+  publisher = {European Language Resources Association (ELRA)},
+  doi = {10.63317/5fgm358dfxt5},
+  abstract = {This paper presents a study on readability-controlled Sentence Simplification for Italian, addressing the scarcity of annotated resources for low-resource languages. We introduce IMPaCTS (Italian Multilevel Parallel Corpus for Text Simplification), the first fully automatically created corpus of 1,444,160 original–simple sentence pairs automatically annotated with readability levels and linguistic features. It was generated using an Italian LLM prompted in zero-shot to produce multiple simplifications per input sentence. Increasing portions of the resource are used to fine-tune mono- and multilingual open-weight LLMs, conditioning them to generate simplifications at a target readability level. Results from automatic and human evaluations show that fine-tuning on IMPaCTS improves performance both in terms of task completion and adherence to the targeted readability levels compared to few-shot baselines.}
 }
 ```
 Did you use or was inspired by the dataset creation pipeline? Then please also cite the pipeline description paper: 
